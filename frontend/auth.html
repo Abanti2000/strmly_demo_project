@@ -1,0 +1,60 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Signup/Login</title>
+</head>
+<body>
+  <h2>Signup</h2>
+  <form id="signupForm">
+    <input name="name" placeholder="Name" required><br>
+    <input name="email" placeholder="Email" type="email" required><br>
+    <input name="password" placeholder="Password" type="password" required><br>
+    <button type="submit">Signup</button>
+  </form>
+
+  <h2>Login</h2>
+  <form id="loginForm">
+    <input name="email" placeholder="Email" type="email" required><br>
+    <input name="password" placeholder="Password" type="password" required><br>
+    <button type="submit">Login</button>
+  </form>
+
+  <script>
+    const signupForm = document.getElementById("signupForm");
+    const loginForm = document.getElementById("loginForm");
+
+    signupForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData(signupForm);
+      const data = Object.fromEntries(formData);
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      const json = await res.json();
+      alert(json.message || "Signup complete");
+    });
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData(loginForm);
+      const data = Object.fromEntries(formData);
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      const json = await res.json();
+      if (json.token) {
+        localStorage.setItem("token", json.token);
+        alert("Login successful");
+        window.location.href = "upload.html";
+      } else {
+        alert(json.message || "Login failed");
+      }
+    });
+  </script>
+</body>
+</html>

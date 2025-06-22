@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STRMLY Clone - Auth & Video Feed</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f9f9f9;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    input, textarea {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .video-card {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    video {
+      width: 100%;
+      border-radius: 5px;
+    }
+    nav {
+      text-align: center;
+      margin-top: 20px;
+    }
+    nav a {
+      margin: 0 10px;
+      color: #007bff;
+      text-decoration: none;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="auth-page">
+    <h2>Signup / Login</h2>
+    <form id="auth-form">
+      <input type="text" id="name" placeholder="Name" required />
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button type="submit">Signup/Login</button>
+    </form>
+    <div id="auth-message"></div>
+  </div>
+
+  <div class="container" id="upload-page" style="display:none">
+    <h2>Upload Video</h2>
+    <form id="upload-form">
+      <input type="text" id="title" placeholder="Video Title" required />
+      <textarea id="description" placeholder="Video Description" required></textarea>
+      <input type="file" id="videoFile" accept="video/mp4" required />
+      <button type="submit">Upload</button>
+    </form>
+    <div id="upload-message"></div>
+  </div>
+
+  <div class="container" id="feed-page" style="display:none">
+    <h2>Video Feed</h2>
+    <div id="video-feed"></div>
+  </div>
+
+  <nav>
+    <a href="#" onclick="showPage('auth')">Auth</a>
+    <a href="#" onclick="showPage('upload')">Upload</a>
+    <a href="#" onclick="showPage('feed')">Feed</a>
+  </nav>
+
+  <script>
+    const API = 'http://localhost:5000';
+    let token = localStorage.getItem('token') || '';
+
+    function showPage(page) {
+      document.getElementById('auth-page').style.display = page === 'auth' ? 'block' : 'none';
+      document.getElementById('upload-page').style.display = page === 'upload' ? 'block' : 'none';
+      document.getElementById('feed-page').style.display = page === 'feed' ? 'block' : 'none';
+      if (page === 'feed') loadVideos();
+    }
+
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const res = await fetch(`${API}/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        token = data.token;
+        localStorage.setItem('token', token);
+        document.getElementById('auth-message').innerText = 'Authenticated!';
+        showPage('upload');
+      } else {
+        document.getElementById('auth-message').innerText = data.message || 'Error';
+      }
+    });
+
+    document.getElementById('upload-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('title').value;
+      const description = document.getElementById('description').value;
+      const file = document.getElementById('videoFile').files[0];
+
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('video', file);
+
+      const res = await fetch(`${API}/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+
+      const data = await res.json();
+      document.getElementById('upload-message').innerText = res.ok ? 'Upload successful!' : data.message;
+    });
+
+    async function loadVideos() {
+      const res = await fetch(`${API}/videos`);
+      const videos = await res.json();
+      const container = document.getElementById('video-feed');
+      container.innerHTML = '';
+      videos.forEach(v => {
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        card.innerHTML = `
+          <h3>${v.title}</h3>
+          <p>By: ${v.uploader?.name || 'Unknown'} on ${new Date(v.createdAt).toLocaleDateString()}</p>
+          <video src="${v.videoUrl}" controls></video>
+        `;
+        container.appendChild(card);
+      });
+    }
+    showPage('auth');
+  </script>
+</body>
+</html>
